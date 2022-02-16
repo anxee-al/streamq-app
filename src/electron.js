@@ -2,7 +2,7 @@ const { app, BrowserWindow, screen, ipcMain } = require('electron')
 const iohook = require('iohook')
 const isDev = require('electron-is-dev')
 
-const VER = '0.1'
+const VER = '0.1.1'
 
 app.whenReady().then(() => {
   const win = new BrowserWindow({
@@ -16,8 +16,11 @@ app.whenReady().then(() => {
     icon: './static/logo.png'
   })
   win.loadURL(isDev ? 'http://localhost:8081/dashboard' : 'https://streameq.xyz/dashboard')
+
   iohook.start()
-  iohook.on('keyup', e => win.webContents.send('keyup', e))
+  iohook.on('mousedown', e => win.webContents.send('mousedown', e))
+  iohook.on('keydown', e => win.webContents.send('keydown', e))
+  
   ipcMain.handle('version', () => VER)
   win.webContents.on('ipc-message', (_, type) => {
     type === 'minimize' && win.minimize()
