@@ -13,6 +13,7 @@
     "@fortawesome/fontawesome-svg-core": "^1.2.35",
     "@fortawesome/free-solid-svg-icons": "^5.15.3",
     "@fortawesome/react-fontawesome": "^0.1.14",
+    "bindings": "^1.5.0",
     "clsx": "^1.1.1",
     "electron-is-dev": "^2.0.0",
     "electron-serve": "^1.1.0",
@@ -26,7 +27,7 @@
     "@types/react": "^17.0.14",
     "@types/react-dom": "^17.0.9",
     "css-loader": "^6.0.0",
-    "electron": "12",
+    "electron": "^21.2.2",
     "electron-builder": "^22.11.7",
     "electron-rebuild": "^2.3.5",
     "html-webpack-plugin": "^5.3.2",
@@ -42,13 +43,22 @@
   "build": {
     "appId": "com.electron.streameq-app",
     "win": {
-      "target": "portable"
+      "target": "portable",
+      "icon": "static/icon.ico"
     },
+    "asarUnpack": [
+      "*.node"
+    ],
     "portable": {
       "unicode": true,
       "artifactName": "StreamEQ.exe"
     },
     "extraResources": [
+      {
+        "from": "./build/Release",
+        "to": "modules/ioevents",
+        "filter": ["*.node"]
+      },
       {
         "from": "./dist/web",
         "to": "static",
@@ -58,19 +68,5 @@
       }
     ]
   },
-  "iohook": {
-    "targets": [
-      "node-72",
-      "electron-87"
-    ],
-    "platforms": [
-      "win32",
-      "darwin",
-      "linux"
-    ],
-    "arches": [
-      "x64",
-      "ia32"
-    ]
-  }
+  "nodeGypRebuild": true
 }
