@@ -1,72 +1,83 @@
 {
-  "name": "streameq-app",
+  "name": "streamq",
+  "productName": "StreamQ",
   "version": "1.0.0",
-  "main": "src/electron.js",
-  "license": "MIT",
+  "description": "StreamQ - https://streamq.io",
+  "main": ".webpack/main",
+  "license": "SEE LICENSE IN LICENSE.txt",
+  "keywords": [],
+  "author": {
+    "name": "StreamQ",
+    "email": "streamq.io@gmail.com",
+    "url": "https://github.com/DXLETED/streamq-app"
+  },
   "scripts": {
-    "dev": "webpack --config webpack.dev.js",
-    "dev-electron": "electron .",
-    "build": "webpack --config webpack.prod.js && electron-builder",
-    "rebuildnew": "npm rebuild --runtime=electron --target=5.0.0 --disturl=https://atom.io/download/atom-shell --abi=70"
+    "rebuild": "cd napi/streamq-sysapi && npm run build",
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make:dev": "electron-forge make",
+    "make:prod": "electron-forge make --prod",
+    "publish": "electron-forge publish",
+    "lint": "eslint --ext .ts,.tsx .",
+    "postinstall": "cd napi/streamq-sysapi && npm run build"
   },
   "dependencies": {
-    "@fortawesome/fontawesome-svg-core": "^1.2.35",
-    "@fortawesome/free-solid-svg-icons": "^5.15.3",
-    "@fortawesome/react-fontawesome": "^0.1.14",
-    "bindings": "^1.5.0",
-    "clsx": "^1.1.1",
-    "electron-is-dev": "^2.0.0",
-    "electron-serve": "^1.1.0",
-    "iohook": "^0.9.3",
-    "lodash": "^4.17.21",
-    "react": "^17.0.2",
-    "react-dom": "^17.0.2"
+    "@types/react": "^18.2.20",
+    "@types/react-dom": "^18.2.7",
+    "clsx": "^2.0.0",
+    "electron-is-dev": "^3.0.1",
+    "electron-squirrel-startup": "^1.0.0",
+    "electron-updater": "^6.1.8",
+    "electron-window-state": "^5.0.3",
+    "i18next": "^23.11.5",
+    "lowdb": "^7.0.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-i18next": "^14.1.2",
+    "yaml": "^2.4.2",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@types/lodash": "^4.14.171",
-    "@types/react": "^17.0.14",
-    "@types/react-dom": "^17.0.9",
-    "css-loader": "^6.0.0",
-    "electron": "^21.2.2",
-    "electron-builder": "^22.11.7",
-    "electron-rebuild": "^2.3.5",
-    "html-webpack-plugin": "^5.3.2",
-    "node-sass": "^6.0.1",
-    "sass-loader": "^12.1.0",
-    "style-loader": "^3.1.0",
-    "ts-loader": "^9.2.3",
-    "typescript": "^4.3.5",
-    "webpack": "^5.44.0",
-    "webpack-cli": "^4.7.2",
-    "webpack-dev-server": "^3.11.2"
+    "@electron-delta/builder": "^0.1.17",
+    "@electron-forge/cli": "^6.4.2",
+    "@electron-forge/maker-deb": "^6.4.2",
+    "@electron-forge/maker-rpm": "^6.4.2",
+    "@electron-forge/maker-squirrel": "^6.4.2",
+    "@electron-forge/maker-zip": "^6.4.2",
+    "@electron-forge/plugin-auto-unpack-natives": "^6.4.2",
+    "@electron-forge/plugin-webpack": "^6.4.2",
+    "@felixrieseberg/electron-forge-maker-nsis": "^6.0.6",
+    "@typescript-eslint/eslint-plugin": "^5.0.0",
+    "@typescript-eslint/parser": "^5.0.0",
+    "@vercel/webpack-asset-relocator-loader": "1.7.3",
+    "copy-webpack-plugin": "^12.0.2",
+    "css-loader": "6.11.0",
+    "electron": "26.6.10",
+    "eslint": "^9.3.0",
+    "eslint-plugin-import": "^2.25.0",
+    "file-loader": "^6.2.0",
+    "fork-ts-checker-webpack-plugin": "^9.0.2",
+    "node-loader": "^2.0.0",
+    "sass": "^1.66.0",
+    "sass-loader": "14.2.1",
+    "style-loader": "^4.0.0",
+    "ts-loader": "^9.2.2",
+    "ts-node": "^10.0.0",
+    "typescript": "~5.4.5",
+    "yaml-loader": "^0.8.1"
   },
   "build": {
-    "appId": "com.electron.streameq-app",
-    "win": {
-      "target": "portable",
-      "icon": "static/icon.ico"
-    },
-    "asarUnpack": [
-      "*.node"
-    ],
-    "portable": {
-      "unicode": true,
-      "artifactName": "StreamEQ.exe"
-    },
-    "extraResources": [
-      {
-        "from": "./build/Release",
-        "to": "modules/ioevents",
-        "filter": ["*.node"]
-      },
-      {
-        "from": "./dist/web",
-        "to": "static",
-        "filter": [
-          "**/*"
-        ]
-      }
-    ]
+    "nsis": {
+      "oneClick": true,
+      "runAfterFinish": false,
+      "differentialPackage": true,
+      "deleteAppDataOnUninstall": true,
+      "createDesktopShortcut": "always"
+    }
   },
-  "nodeGypRebuild": true
+  "browserslist": [
+    ">0.2%",
+    "not dead",
+    "not op_mini all"
+  ]
 }
