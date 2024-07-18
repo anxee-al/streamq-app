@@ -1,7 +1,12 @@
 use std::collections::HashSet;
 use std::sync::Mutex;
 use std::thread;
-use winapi::um::winuser::{self, CallNextHookEx, DispatchMessageA, GetMessageA, SetWindowsHookExA, TranslateMessage, UnhookWindowsHookEx, KBDLLHOOKSTRUCT, LPMSG, MSLLHOOKSTRUCT, VK_LBUTTON, VK_MBUTTON, VK_MEDIA_PLAY_PAUSE, VK_RBUTTON, VK_VOLUME_DOWN, VK_XBUTTON1, VK_XBUTTON2, WH_KEYBOARD_LL, WH_MOUSE_LL, WM_KEYDOWN, WM_KEYUP};
+use winapi::um::winuser::{
+  self, CallNextHookEx, DispatchMessageA, GetMessageA, SetWindowsHookExA, TranslateMessage,
+  UnhookWindowsHookEx, KBDLLHOOKSTRUCT, LPMSG, MSLLHOOKSTRUCT, VK_LBUTTON, VK_MBUTTON,
+  VK_MEDIA_PLAY_PAUSE, VK_RBUTTON, VK_VOLUME_DOWN, VK_XBUTTON1, VK_XBUTTON2, WH_KEYBOARD_LL,
+  WH_MOUSE_LL, WM_KEYDOWN, WM_KEYUP, WM_SYSKEYDOWN, WM_SYSKEYUP,
+};
 use winapi::shared::windef::HHOOK;
 
 use crate::config::Keybind;
@@ -42,8 +47,7 @@ pub fn set_keybinds(keybinds: Vec<Keybind>) {
 extern "system" fn keyboard_hook_callback(code: i32, wparam: usize, lparam: isize) -> isize {
   let wparam_int = wparam as u32;
   let keypress: KBDLLHOOKSTRUCT = unsafe { *(lparam as *mut KBDLLHOOKSTRUCT) };
-  if wparam_int == WM_KEYDOWN {
-    // EVENT_EMITTER.lock().unwrap().emit("keyDown", keypress.vkCode);
+  if wparam_int == WM_KEYDOWN || wparam_int == WM_SYSKEYDOWN {
     NOW_PRESSED.lock().unwrap().insert(keypress.vkCode);
     let keybinds = KEYBINDS.lock().unwrap().clone();
     let keybind = keybinds.iter().find(|&kb| kb.bind.iter().all(|&kb| NOW_PRESSED.lock().unwrap().iter().any(|&k| k == kb)));
@@ -53,8 +57,7 @@ extern "system" fn keyboard_hook_callback(code: i32, wparam: usize, lparam: isiz
         return 1;
       }
     }
-  } else if wparam_int == WM_KEYUP {
-    // EVENT_EMITTER.lock().unwrap().emit("keyUp", keypress.vkCode);
+  } else if wparam_int == WM_KEYUP || wparam_int == WM_SYSKEYUP {
     NOW_PRESSED.lock().unwrap().remove(&keypress.vkCode);
   }
   unsafe {
@@ -84,7 +87,6 @@ extern "system" fn mouse_hook_callback(code: i32, wparam: usize, lparam: isize) 
     return 0;
   }
   if wparam_int == winuser::WM_LBUTTONDOWN || wparam_int == winuser::WM_RBUTTONDOWN || wparam_int == winuser::WM_MBUTTONDOWN || wparam_int == winuser::WM_XBUTTONDOWN {
-    // EVENT_EMITTER.lock().unwrap().emit("mouseDown", mcode);
     NOW_PRESSED.lock().unwrap().insert(mcode);
     let keybinds = KEYBINDS.lock().unwrap().clone();
     let keybind = keybinds.iter().find(|&kb| kb.bind.iter().all(|&kb| NOW_PRESSED.lock().unwrap().iter().any(|&k| k == kb)));
@@ -92,7 +94,6 @@ extern "system" fn mouse_hook_callback(code: i32, wparam: usize, lparam: isize) 
       EVENT_EMITTER.lock().unwrap().emit("keybindPressed", &keybind.unwrap().action.as_ref().unwrap());
     }
   } else if wparam_int == winuser::WM_LBUTTONUP || wparam_int == winuser::WM_RBUTTONUP || wparam_int == winuser::WM_MBUTTONUP || wparam_int == winuser::WM_XBUTTONUP {
-    // EVENT_EMITTER.lock().unwrap().emit("mouseUp", mcode);
     NOW_PRESSED.lock().unwrap().remove(&mcode);
   }
   unsafe {
