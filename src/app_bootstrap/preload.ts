@@ -11,6 +11,8 @@ contextBridge.exposeInMainWorld('appAPI', {
   extendMediaSession: () => ipcRenderer.invoke('extendMediaSession'),
   getYTVideoVolume: () => ipcRenderer.invoke('getYTVideoVolume'),
   setYTVideoVolume: (vol: number) => ipcRenderer.invoke('setYTVideoVolume', vol),
+  startByeDPI: (port: number) => ipcRenderer.invoke('startByeDPI', port),
+  stopByeDPI: () => ipcRenderer.invoke('stopByeDPI'),
   pauseAll: () => ipcRenderer.invoke('pauseAll'),
   resume: (apps: string[]) => ipcRenderer.invoke('resume', apps),
   getLocale: () => ipcRenderer.sendSync('synchronous-message', 'getLocale'),

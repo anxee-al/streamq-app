@@ -1,7 +1,8 @@
-import { IpcMainInvokeEvent, app, ipcMain, screen, shell } from 'electron'
+import { IpcMainInvokeEvent, app, dialog, ipcMain, screen, shell } from 'electron'
 import { AcrylicBrowserWindow } from '../utils/AcrylicBrowserWindow'
 import { bootstrapWindow } from './bootstrap'
 import { settings } from '../settings'
+import { byeDPI } from '../utils/byeDPI'
 import windowStateKeeper from 'electron-window-state'
 import isDev from 'electron-is-dev'
 import config from 'config'
@@ -17,7 +18,7 @@ class MainWindow {
   instanceEvents: Record<string, (args: Record<string, string>) => void> = {
     auth: ({ code }: { code: string }) => this.window.webContents.send('auth', code)
   }
-  init() {
+  async init() {
     bootstrapWindow.setStatus('starting')
     const height = ~~Math.min(800, screen.getPrimaryDisplay().workAreaSize.height / 1.2)
     const { isMaximized, ...windowState } = windowStateKeeper({
@@ -44,6 +45,8 @@ class MainWindow {
     ipcMain.handle('pauseAll', this.handlers.pauseAll)
     ipcMain.handle('resume', this.handlers.resume)
     ipcMain.handle('openAppsVolume', this.handlers.openAppsVolume)
+    ipcMain.handle('startByeDPI', this.handlers.startByeDPI)
+    ipcMain.handle('stopByeDPI', this.handlers.stopByeDPI)
     ipcMain.handle('minimize', this.handlers.minimize)
     ipcMain.handle('unmaximize', this.handlers.unmaximize)
     ipcMain.handle('maximize', this.handlers.maximize)
@@ -129,6 +132,11 @@ class MainWindow {
     pauseAll: () => sysapi.pauseAll(),
     resume: (_: IpcMainInvokeEvent, apps: string[]) => sysapi.resume(apps),
     openAppsVolume: () => shell.openExternal('ms-settings:apps-volume'),
+    startByeDPI: (_: IpcMainInvokeEvent, port: number) => byeDPI.start(this.window, port).catch(err => {
+      console.log('startByeDPI error:', err)
+      dialog.showErrorBox('ByeDPI Error', String(err))
+    }),
+    stopByeDPI: () => byeDPI.stop(this.window),
     minimize: () => this.window.minimize(),
     unmaximize: () => this.window.unmaximize(),
     maximize: () => this.window.maximize(),

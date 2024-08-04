@@ -2,13 +2,12 @@ import { app, BrowserWindow } from 'electron'
 import { bootstrapWindow } from './app/bootstrap'
 import { settings } from './settings'
 import path from 'path'
+import { byeDPI } from './utils/byeDPI'
 
 console.log(`${app.getName()} ${app.getVersion()}`)
 
-if (!settings.data.systemMediaControlsSession) {
-  console.log(settings.data.systemMediaControlsSession)
+if (!settings.data.systemMediaControlsSession)
   app.commandLine.appendSwitch('disable-features', 'HardwareMediaKeyHandling,MediaSessionService')
-}
 
 if (process.defaultApp) {
   if (process.argv.length >= 2) {
@@ -31,4 +30,8 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow()
+})
+
+app.on('before-quit', () => {
+  byeDPI.stopProcess()
 })
