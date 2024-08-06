@@ -8,10 +8,10 @@ const BYEDPI_DIR = path.join(MODULES_DIR, 'byedpi')
 
 class ByeDPI {
   process: ChildProcess | null
-  async start(window: BrowserWindow, port: number) {
+  async start(window: BrowserWindow, port: number, args: string) {
     if (this.process) await this.stop(window)
     return new Promise<void>((res, rej) => {
-      this.process = spawn(path.join(BYEDPI_DIR, 'ciadpi.exe'), ['-i', '127.0.0.1', '-p', String(port)])
+      this.process = spawn(path.join(BYEDPI_DIR, 'ciadpi.exe'), ['-i', '127.0.0.1', '-p', String(port), ...args.split(' ')])
       this.process.stdout.on('data', (data) => console.log(`byedpi: ${data}`))
       this.process.stderr.on('data', (data) => console.error(`byedpi: ${data}`))
       this.process.on('spawn', async () => {

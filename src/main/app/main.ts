@@ -132,7 +132,7 @@ class MainWindow {
     pauseAll: () => sysapi.pauseAll(),
     resume: (_: IpcMainInvokeEvent, apps: string[]) => sysapi.resume(apps),
     openAppsVolume: () => shell.openExternal('ms-settings:apps-volume'),
-    startByeDPI: (_: IpcMainInvokeEvent, port: number) => byeDPI.start(this.window, port).catch(err => {
+    startByeDPI: (_: IpcMainInvokeEvent, port: number, args: string) => byeDPI.start(this.window, port, args).catch(err => {
       console.log('startByeDPI error:', err)
       dialog.showErrorBox('ByeDPI Error', String(err))
     }),
