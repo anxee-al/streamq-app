@@ -2,16 +2,18 @@ import { IpcMainInvokeEvent, app, dialog, ipcMain, screen, shell } from 'electro
 import { AcrylicBrowserWindow } from '../utils/AcrylicBrowserWindow'
 import { bootstrapWindow } from './bootstrap'
 import { settings } from '../settings'
-import { byeDPI } from '../utils/byeDPI'
 import windowStateKeeper from 'electron-window-state'
 import isDev from 'electron-is-dev'
 import config from 'config'
 
 // eslint-disable-next-line import/no-unresolved
 import sysapi from '@napi/streamq-sysapi/streamq-sysapi.win32-x64-msvc.node'
+import { YoutubeProxy } from '../modules/youtubeProxy/YoutubeProxy'
+import { YoutubeProxyConnection } from '../modules/youtubeProxy/YoutubeProxyConnection'
 
 class MainWindow {
   window: AcrylicBrowserWindow
+  youtubeProxy: YoutubeProxy
   isLoaded = false
   isInitialized = false
   isMaximized = false
@@ -33,6 +35,8 @@ class MainWindow {
       show: false,
       webPreferences: { preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY }
     })
+    this.youtubeProxy = new YoutubeProxy(this.window)
+    app.on('before-quit', () => this.youtubeProxy.stop())
     ipcMain.on('synchronous-message', (event, arg) => {
       if (arg === 'init') event.returnValue = this.handlers.init()
     })
@@ -45,8 +49,7 @@ class MainWindow {
     ipcMain.handle('pauseAll', this.handlers.pauseAll)
     ipcMain.handle('resume', this.handlers.resume)
     ipcMain.handle('openAppsVolume', this.handlers.openAppsVolume)
-    ipcMain.handle('startByeDPI', this.handlers.startByeDPI)
-    ipcMain.handle('stopByeDPI', this.handlers.stopByeDPI)
+    ipcMain.handle('setYoutubeConnectionMethod', this.handlers.setYoutubeConnectionMethod)
     ipcMain.handle('minimize', this.handlers.minimize)
     ipcMain.handle('unmaximize', this.handlers.unmaximize)
     ipcMain.handle('maximize', this.handlers.maximize)
@@ -132,11 +135,8 @@ class MainWindow {
     pauseAll: () => sysapi.pauseAll(),
     resume: (_: IpcMainInvokeEvent, apps: string[]) => sysapi.resume(apps),
     openAppsVolume: () => shell.openExternal('ms-settings:apps-volume'),
-    startByeDPI: (_: IpcMainInvokeEvent, port: number, args: string) => byeDPI.start(this.window, port, args).catch(err => {
-      console.log('startByeDPI error:', err)
-      dialog.showErrorBox('ByeDPI Error', String(err))
-    }),
-    stopByeDPI: () => byeDPI.stop(this.window),
+    setYoutubeConnectionMethod: (_: IpcMainInvokeEvent, connection: YoutubeProxyConnection[keyof YoutubeProxyConnection]) =>
+      this.youtubeProxy.set(connection).catch(err => dialog.showErrorBox('Proxy Error', String(err))),
     minimize: () => this.window.minimize(),
     unmaximize: () => this.window.unmaximize(),
     maximize: () => this.window.maximize(),

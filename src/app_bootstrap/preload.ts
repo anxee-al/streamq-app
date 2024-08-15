@@ -1,4 +1,5 @@
 import { ipcRenderer, contextBridge } from 'electron'
+import { YoutubeProxyConnection } from '../main/modules/youtubeProxy/YoutubeProxyConnection'
 
 const EVENTS = ['init', 'ready', 'minimize', 'unmaximize', 'maximize', 'relaunch', 'quit', 'openAppsVolume'] as const
 
@@ -11,8 +12,7 @@ contextBridge.exposeInMainWorld('appAPI', {
   extendMediaSession: () => ipcRenderer.invoke('extendMediaSession'),
   getYTVideoVolume: () => ipcRenderer.invoke('getYTVideoVolume'),
   setYTVideoVolume: (vol: number) => ipcRenderer.invoke('setYTVideoVolume', vol),
-  startByeDPI: (port: number, args: string) => ipcRenderer.invoke('startByeDPI', port, args),
-  stopByeDPI: () => ipcRenderer.invoke('stopByeDPI'),
+  setYoutubeConnectionMethod: (connection: YoutubeProxyConnection[keyof YoutubeProxyConnection]) => ipcRenderer.invoke('setYoutubeConnectionMethod', connection),
   pauseAll: () => ipcRenderer.invoke('pauseAll'),
   resume: (apps: string[]) => ipcRenderer.invoke('resume', apps),
   getLocale: () => ipcRenderer.sendSync('synchronous-message', 'getLocale'),
