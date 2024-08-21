@@ -29,6 +29,11 @@ yarn
 - `rebuild`: Rebuild the addons.
 - `lint`: Check the code with ESLint.
 
-## License
+## Third-Party Licenses
 
-All Rights Reserved.
+### xray-core
+
+This software includes components from the xray-core project, which are licensed under the Mozilla Public License v2.0.
+You can obtain a copy of the MPL at https://www.mozilla.org/MPL/2.0/.
+
+The source code for xray-core can be found at https://github.com/XTLS/xray-core.
