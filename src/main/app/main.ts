@@ -1,19 +1,21 @@
-import { IpcMainInvokeEvent, app, dialog, ipcMain, screen, shell } from 'electron'
+import { IpcMainInvokeEvent, app, dialog, ipcMain, screen, session, shell } from 'electron'
 import { AcrylicBrowserWindow } from '../utils/AcrylicBrowserWindow'
 import { bootstrapWindow } from './bootstrap'
 import { settings } from '../settings'
+import { YoutubeUtils } from '../modules/youtubeUtils/YoutubeUtils'
+import { YoutubeProxy } from '../modules/youtubeProxy/YoutubeProxy'
+import { YoutubeProxyConnection } from '../modules/youtubeProxy/YoutubeProxyConnection'
 import windowStateKeeper from 'electron-window-state'
 import isDev from 'electron-is-dev'
 import config from 'config'
 
 // eslint-disable-next-line import/no-unresolved
 import sysapi from '@napi/streamq-sysapi/streamq-sysapi.win32-x64-msvc.node'
-import { YoutubeProxy } from '../modules/youtubeProxy/YoutubeProxy'
-import { YoutubeProxyConnection } from '../modules/youtubeProxy/YoutubeProxyConnection'
 
 class MainWindow {
   window: AcrylicBrowserWindow
   youtubeProxy: YoutubeProxy
+  youtubeUtils: YoutubeUtils
   isLoaded = false
   isInitialized = false
   isMaximized = false
@@ -35,6 +37,7 @@ class MainWindow {
       show: false,
       webPreferences: { preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY }
     })
+    this.youtubeUtils = new YoutubeUtils(this.window)
     this.youtubeProxy = new YoutubeProxy(this.window)
     app.on('before-quit', () => this.youtubeProxy.stop())
     ipcMain.on('synchronous-message', (event, arg) => {
@@ -44,12 +47,14 @@ class MainWindow {
     ipcMain.handle('setSystemMediaControlsSession', this.handlers.setSystemMediaControlsSession)
     ipcMain.handle('setKeybinds', this.handlers.setKeybinds)
     ipcMain.handle('extendMediaSession', this.handlers.extendMediaSession)
-    ipcMain.handle('getYTVideoVolume', this.handlers.getYTVideoVolume)
+    ipcMain.handle('getYTVideoLoudnessDB', this.handlers.getYTVideoLoudnessDB)
     ipcMain.handle('setYTVideoVolume', this.handlers.setYTVideoVolume)
     ipcMain.handle('pauseAll', this.handlers.pauseAll)
     ipcMain.handle('resume', this.handlers.resume)
     ipcMain.handle('openAppsVolume', this.handlers.openAppsVolume)
     ipcMain.handle('setYoutubeConnectionMethod', this.handlers.setYoutubeConnectionMethod)
+    ipcMain.handle('setYoutubePiPMode', this.handlers.setYoutubePiPMode)
+    ipcMain.handle('setYoutubePiPAlwaysOnTopMode', this.handlers.setYoutubePiPAlwaysOnTopMode)
     ipcMain.handle('minimize', this.handlers.minimize)
     ipcMain.handle('unmaximize', this.handlers.unmaximize)
     ipcMain.handle('maximize', this.handlers.maximize)
@@ -58,6 +63,7 @@ class MainWindow {
     windowState.manage(this.window)
 
     this.window.webContents.setWindowOpenHandler(details => {
+      if (details.features.includes('internal=true')) return { action: 'allow' }
       shell.openExternal(details.url)
       return { action: 'deny' }
     })
@@ -75,6 +81,7 @@ class MainWindow {
         this.instanceEvents[url.hostname as keyof typeof this.instanceEvents]?.(params)
       }
     })
+
     this.load()
   }
   load() {
@@ -113,7 +120,7 @@ class MainWindow {
       }
     },
     setLanguage: (_: IpcMainInvokeEvent, lang: 'en' | 'ru' | null) => settings.set('language', lang),
-    setSystemMediaControlsSession: (_: IpcMainInvokeEvent, n: boolean) => settings.set('systemMediaControlsSession', n),
+    setSystemMediaControlsSession: (_: IpcMainInvokeEvent, isActive: boolean) => settings.set('systemMediaControlsSession', isActive),
     setKeybinds: (_: IpcMainInvokeEvent, keybinds: { action: string, bind: number[] }[]) => sysapi.setKeybinds(keybinds),
     extendMediaSession: () => this.window.webContents.mainFrame.frames.forEach(f => f.executeJavaScript(`
       class MediaMetadata extends window.MediaMetadata {
@@ -126,17 +133,15 @@ class MainWindow {
         }
       }
     `)),
-    getYTVideoVolume: () => this.window.webContents.mainFrame.frames
-      .find(frame => frame.origin === 'https://www.youtube.com')
-      ?.executeJavaScript('document.querySelector(\'video\')?.volume'),
-    setYTVideoVolume: (_: IpcMainInvokeEvent, vol: number) => this.window.webContents.mainFrame.frames
-      .find(frame => frame.origin === 'https://www.youtube.com')
-      ?.executeJavaScript(`document.querySelector(\'video\').volume = ${vol}`),
+    getYTVideoLoudnessDB: (_: IpcMainInvokeEvent, videoId: string) => this.youtubeUtils.getVideoLoudnessDB(videoId),
+    setYTVideoVolume: (_: IpcMainInvokeEvent, vol: number) => this.youtubeUtils.setVideoVolume(vol),
     pauseAll: () => sysapi.pauseAll(),
     resume: (_: IpcMainInvokeEvent, apps: string[]) => sysapi.resume(apps),
     openAppsVolume: () => shell.openExternal('ms-settings:apps-volume'),
     setYoutubeConnectionMethod: (_: IpcMainInvokeEvent, connection: YoutubeProxyConnection[keyof YoutubeProxyConnection]) =>
       this.youtubeProxy.set(connection).catch(err => dialog.showErrorBox('Proxy Error', String(err))),
+    setYoutubePiPMode: (_: IpcMainInvokeEvent, isActive: boolean, isOnTop: boolean) => this.youtubeUtils.setPiPMode(isActive, isOnTop),
+    setYoutubePiPAlwaysOnTopMode: (_: IpcMainInvokeEvent, isOnTop: boolean) => this.youtubeUtils.setPiPAlwaysOnTopMode(isOnTop),
     minimize: () => this.window.minimize(),
     unmaximize: () => this.window.unmaximize(),
     maximize: () => this.window.maximize(),

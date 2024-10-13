@@ -1,9 +1,11 @@
 import { app, BrowserWindow } from 'electron'
+import path from 'path'
 import { bootstrapWindow } from './app/bootstrap'
 import { settings } from './settings'
-import path from 'path'
 
 console.log(`${app.getName()} ${app.getVersion()}`)
+
+app.commandLine.appendSwitch('disable-site-isolation-trials')
 
 if (!settings.data.systemMediaControlsSession)
   app.commandLine.appendSwitch('disable-features', 'HardwareMediaKeyHandling,MediaSessionService')

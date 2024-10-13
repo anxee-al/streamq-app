@@ -12,6 +12,7 @@ declare module "config" {
 declare module "*/streamq-sysapi.win32-x64-msvc.node" {
   const applyAcrylic: (hwnd: number, color: [number, number, number, number]) => void
   const disableRounds: (hwnd: number) => void
+  const setPipAlwaysOnTopMode: (isOnTop: boolean) => void
   const sleep: (ms: number) => void
   const initialize: (config: any) => void
   const setKeybinds: (keybinds: { action: string, bind: number[] }[]) => void
