@@ -12,7 +12,8 @@ use std::sync::Mutex;
 #[derive(serde::Deserialize)]
 pub struct NowPlaying {
   pub app: String,
-  pub title: String
+  pub title: String,
+  pub artist: String
 }
 
 lazy_static! {
@@ -29,8 +30,13 @@ pub fn initialize(config: Config) {
     let info_changed_chadler = move || {
       let thread_rx = rx.clone();
       thread::spawn(move || {
-        println!("Thread spawned");
-        let manager: GlobalSystemMediaTransportControlsSessionManager = block_on(GlobalSystemMediaTransportControlsSessionManager::RequestAsync().unwrap()).unwrap();
+        println!("streamq-sysapi: Thread spawned");
+        let manager: GlobalSystemMediaTransportControlsSessionManager = match block_on(GlobalSystemMediaTransportControlsSessionManager::RequestAsync().unwrap()) {
+          Ok(manager) => manager,
+          Err(e) => {
+            eprintln!("streamq-sysapi: Failed to get the session manager: {:?}", e);
+            return;
+        }};
         let sessions = manager.GetSessions().unwrap();
         struct SessionListeners {
           playback_info_changed: EventRegistrationToken,
@@ -42,16 +48,16 @@ pub fn initialize(config: Config) {
           let s = sessions.GetAt(i).unwrap();
           listeners.push(SessionListeners{
             playback_info_changed: s.PlaybackInfoChanged(&TypedEventHandler::new(move |_, _| {
-              handle_playback_update();
+              handle_playback_update().unwrap_or_else(|err| { println!("streamq-sysapi: Playback update error: {}", err) });
               Ok(())
             })).unwrap(),
             media_properties_changed: s.MediaPropertiesChanged(&TypedEventHandler::new(move |_, _| {
-              handle_playback_update();
+              handle_playback_update().unwrap_or_else(|err| { println!("streamq-sysapi: Playback update error: {}", err) });
               Ok(())
             })).unwrap()
           });
         }
-        handle_playback_update();
+        handle_playback_update().unwrap_or_else(|err| { println!("streamq-sysapi: Playback update error: {}", err) });
         thread_rx.recv().unwrap();
         for i in 0..sessions.Size().unwrap() {
           sessions.GetAt(i).unwrap().RemovePlaybackInfoChanged(listeners[i as usize].playback_info_changed).unwrap();
@@ -71,9 +77,9 @@ pub fn initialize(config: Config) {
   });
 }
 
-pub fn pause_all() -> Vec<String> {
-  let manager: GlobalSystemMediaTransportControlsSessionManager = block_on(GlobalSystemMediaTransportControlsSessionManager::RequestAsync().unwrap()).unwrap();
-  let sessions = manager.GetSessions().unwrap();
+pub fn pause_all() -> Result<Vec<String>, Box<dyn std::error::Error>> {
+  let manager: GlobalSystemMediaTransportControlsSessionManager = block_on(GlobalSystemMediaTransportControlsSessionManager::RequestAsync().unwrap())?;
+  let sessions = manager.GetSessions()?;
   let mut paused_apps = vec![];
   for i in 0..sessions.Size().unwrap() {
     let session = sessions.GetAt(i).unwrap();
@@ -84,12 +90,12 @@ pub fn pause_all() -> Vec<String> {
       }
     }
   }
-  paused_apps
+  Ok(paused_apps)
 }
 
-pub fn resume(apps: Vec<String>) {
-  let manager: GlobalSystemMediaTransportControlsSessionManager = block_on(GlobalSystemMediaTransportControlsSessionManager::RequestAsync().unwrap()).unwrap();
-  let sessions = manager.GetSessions().unwrap();
+pub fn resume(apps: Vec<String>) -> Result<(), Box<dyn std::error::Error>> {
+  let manager: GlobalSystemMediaTransportControlsSessionManager = block_on(GlobalSystemMediaTransportControlsSessionManager::RequestAsync().unwrap())?;
+  let sessions = manager.GetSessions()?;
   for i in 0..sessions.Size().unwrap() {
     let session = sessions.GetAt(i).unwrap();
     let source_app = session.SourceAppUserModelId().unwrap().to_string().to_lowercase();
@@ -97,24 +103,27 @@ pub fn resume(apps: Vec<String>) {
       let _ = session.TryPlayAsync();
     }
   }
+  Ok(())
 }
 
-fn handle_playback_update() {
-  let manager: GlobalSystemMediaTransportControlsSessionManager = block_on(GlobalSystemMediaTransportControlsSessionManager::RequestAsync().unwrap()).unwrap();
-  let sessions = manager.GetSessions().unwrap();
+fn handle_playback_update() -> Result<(), Box<dyn std::error::Error>> {
+  let manager: GlobalSystemMediaTransportControlsSessionManager = block_on(GlobalSystemMediaTransportControlsSessionManager::RequestAsync().unwrap())?;
+  let sessions = manager.GetSessions()?;
   let mut now_playing: Option<NowPlaying> = None;
-  for i in 0..sessions.Size().unwrap() {
+  for i in 0..sessions.Size()? {
     let session = sessions.GetAt(i).unwrap();
     let source_app = session.SourceAppUserModelId().unwrap().to_string().to_lowercase();
     println!("streamq-sysapi: Playback changed ({}) {} (isStreamQ: {} {})", session.SourceAppUserModelId().unwrap(), session.GetPlaybackInfo().unwrap().PlaybackStatus().unwrap() == GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing, source_app.contains("streamq"), source_app == "electron.exe");
     if session.GetPlaybackInfo().unwrap().PlaybackStatus().unwrap() == GlobalSystemMediaTransportControlsSessionPlaybackStatus::Playing && !is_streamq(source_app) {
-      now_playing = Some(NowPlaying {
-          app: session.SourceAppUserModelId().unwrap().to_string(),
-          title: match block_on(session.TryGetMediaPropertiesAsync().unwrap()) {
-            Ok(media) => media.Title().unwrap().to_string(),
-            Err(_) => "<unknown>".to_string()
-        }
-      });
+      let app = session.SourceAppUserModelId().unwrap().to_string();
+      let (title, artist) = match block_on(session.TryGetMediaPropertiesAsync().unwrap()) {
+        Ok(ref media) => (
+          media.Title().unwrap_or("<unknown>".into()).to_string(),
+          media.Artist().unwrap_or("<unknown>".into()).to_string(),
+        ),
+        Err(_) => ("<unknown>".to_string(), "<unknown>".to_string())
+      };
+      now_playing = Some(NowPlaying { app, title, artist });
       break;
     }
   }
@@ -122,6 +131,7 @@ fn handle_playback_update() {
     *NOW_PLAYING.lock().unwrap() = now_playing;
     EVENT_EMITTER.lock().unwrap().emit("nowPlayingChanged", NOW_PLAYING.lock().unwrap().clone());
   }
+  Ok(())
 }
 
 fn is_streamq(app: String) -> bool {

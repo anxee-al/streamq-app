@@ -10,7 +10,7 @@ mod event_emitter;
 use event_emitter::EVENT_EMITTER;
 
 mod acrylic_window;
-pub use acrylic_window::{apply_acrylic,disable_rounds,sleep};
+pub use acrylic_window::{apply_acrylic,disable_rounds,set_pip_always_on_top_mode,sleep};
 use napi::{threadsafe_function::{ErrorStrategy, ThreadsafeFunction, ThreadsafeFunctionCallMode}, JsFunction, Result};
 
 use media_session::NowPlaying;
@@ -30,13 +30,19 @@ pub fn set_keybinds(keybinds: Vec<Keybind>) {
 }
 
 #[napi]
-pub fn pause_all() -> Vec<String> {
-  media_session::pause_all()
+pub fn pause_all() -> napi::Result<Vec<String>> {
+  match media_session::pause_all() {
+    Ok(paused_sessions) => Ok(paused_sessions),
+    Err(err) => Err(napi::Error::from_reason(err.to_string()))
+  }
 }
 
 #[napi]
-pub fn resume(apps: Vec<String>) {
-  media_session::resume(apps);
+pub fn resume(apps: Vec<String>) -> napi::Result<()> {
+  match media_session::resume(apps) {
+    Ok(_) => Ok(()),
+    Err(err) => Err(napi::Error::from_reason(err.to_string()))
+  }
 }
 
 #[napi]
@@ -58,6 +64,7 @@ pub fn on(ev: String, callback: JsFunction) -> Result<()> {
           let mut obj = ctx.env.create_object().unwrap();
           obj.set("app", &ctx.value.as_ref().unwrap().app).unwrap();
           obj.set("title", &ctx.value.as_ref().unwrap().title).unwrap();
+          obj.set("artist", &ctx.value.as_ref().unwrap().artist).unwrap();
           Ok(vec![obj])
         } else {
           Ok(vec![])
