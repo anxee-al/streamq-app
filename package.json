@@ -1,7 +1,7 @@
 {
   "name": "streamq",
   "productName": "StreamQ",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "StreamQ - https://streamq.io",
   "main": ".webpack/main",
   "license": "MIT",
